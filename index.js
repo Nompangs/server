@@ -3,6 +3,7 @@ const functions = require('firebase-functions');
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const QRCode = require('qrcode');
 
 const admin = require('firebase-admin');
 const serviceAccount = require("./serviceAccountKey.json");
@@ -25,7 +26,8 @@ app.post('/createQR', async (req, res) => {
       ...data,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    res.status(200).json({ uuid: id });
+    const qrCode = await QRCode.toDataURL(id);
+    res.status(200).json({ uuid: id, qrCode });
   } catch (err) {
     console.error('createQR failed', err);
     res.status(500).json({ error: 'Failed to create QR profile' });

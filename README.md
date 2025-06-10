@@ -1,6 +1,7 @@
 # QR Backend
 
-This directory contains a simple Node.js/Firebase Cloud Functions backend for managing QR profiles.
+This directory contains a simple Node.js/Firebase Cloud Functions backend for managing QR profiles. Profiles are
+stored in Firestore using a randomly generated UUID. The server also returns a QR code image that encodes that UUID.
 
 ## Setup
 
@@ -25,6 +26,8 @@ firebase deploy --only functions
 This deploys the Express app as `api` Cloud Function. After deployment you can access the endpoints via:
 
 - `POST https://<region>-<project>.cloudfunctions.net/api/createQR`
+  - Body: character fields. Returns `{ uuid, qrCode }` where `qrCode` is a base64 encoded PNG image.
 - `GET  https://<region>-<project>.cloudfunctions.net/api/loadQR/{uuid}`
 
 Make sure your Firestore database is in native mode.
+
