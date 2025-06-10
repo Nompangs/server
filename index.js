@@ -45,7 +45,6 @@ async function authenticate(req, res, next) {
 // QR 생성 API 엔드포인트
 app.post(
   '/createQR',
-  authenticate,  // 인증 필수
   [
     // 입력값 검증
     body('name').isString().notEmpty(),
@@ -87,7 +86,7 @@ app.post(
           competence: data.finalPersonality?.competence ?? 0,
         },
         photoUrl: data.photoUrl || '',
-        createdBy: req.user.uid,        // 생성자 정보 기록
+        createdBy: req.user?.uid || null, // 인증되지 않은 경우 null
         totalInteractions: 0,           // 대화 횟수 초기화
         uniqueUsers: 0,                 // 고유 사용자 수 초기화
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
