@@ -11,7 +11,7 @@ const serviceAccount = require('./serviceAccountKey.json');
 // Firebase Admin 초기화 (Storage 버킷 설정으로 성능 최적화)
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'nompangs-96d37.firebasestorage.app'
+  storageBucket: 'nompangs-96d37.appspot.com'
 });
 
 const db = admin.firestore();
