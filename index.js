@@ -49,7 +49,18 @@ app.post(
   [
     // 입력값 검증
     body('name').isString().notEmpty(),
+    body('objectType').isString().optional(),
+    body('location').isString().optional(),
+    body('duration').isString().optional(),
+    body('purpose').isString().optional(),
+    body('humorStyle').isString().optional(),
     body('greeting').isString().optional(),
+    body('tags').isArray().optional(),
+    body('finalPersonality').optional().isObject(),
+    body('finalPersonality.introversion').optional().isNumeric(),
+    body('finalPersonality.warmth').optional().isNumeric(),
+    body('finalPersonality.competence').optional().isNumeric(),
+    body('photoUrl').isString().optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -61,8 +72,21 @@ app.post(
       const id = uuidv4();
       // 데이터 모델 확장 및 기본값 설정
       const profile = {
+        personaId: id,
         name: data.name,
+        objectType: data.objectType || '',
+        location: data.location || '',
+        duration: data.duration || '',
+        purpose: data.purpose || '',
+        humorStyle: data.humorStyle || '',
         greeting: data.greeting || '',
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        finalPersonality: {
+          introversion: data.finalPersonality?.introversion ?? 0,
+          warmth: data.finalPersonality?.warmth ?? 0,
+          competence: data.finalPersonality?.competence ?? 0,
+        },
+        photoUrl: data.photoUrl || '',
         createdBy: req.user.uid,        // 생성자 정보 기록
         totalInteractions: 0,           // 대화 횟수 초기화
         uniqueUsers: 0,                 // 고유 사용자 수 초기화
@@ -77,7 +101,7 @@ app.post(
       await file.save(qrBuffer, { contentType: 'image/png' });
       const [url] = await file.getSignedUrl({ action: 'read', expires: '03-01-2500' });
 
-      res.status(200).json({ uuid: id, qrUrl: url });
+      res.status(200).json({ personaId: id, qrUrl: url });
     } catch (err) {
       functions.logger.error('createQR 실패', err); // 에러 로깅
       res.status(500).json({ error: 'Failed to create QR profile' });
