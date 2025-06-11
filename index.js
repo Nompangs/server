@@ -58,6 +58,15 @@ app.post(
     body('personality.warmth').optional().isNumeric(),
     body('personality.competence').optional().isNumeric(),
     body('photoUrl').isString().optional(),
+    // 🚀 AI 성격 시스템 확장 필드들
+    body('aiPersonalityProfile').optional().isObject(),
+    body('photoAnalysis').optional().isObject(),
+    body('lifeStory').optional().isObject(),
+    body('humorMatrix').optional().isObject(),
+    body('attractiveFlaws').optional().isArray(),
+    body('contradictions').optional().isArray(),
+    body('communicationStyle').optional().isObject(),
+    body('structuredPrompt').optional().isString(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -84,6 +93,9 @@ app.post(
           competence: data.personality?.competence ?? 0,
         },
         photoUrl: data.photoUrl || '',
+
+        //여기에 추가
+
         createdBy: req.user?.uid || null, // 인증되지 않은 경우 null
         totalInteractions: 0,           // 대화 횟수 초기화
         uniqueUsers: 0,                 // 고유 사용자 수 초기화
