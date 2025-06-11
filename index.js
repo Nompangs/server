@@ -8,7 +8,7 @@ const { body, param, validationResult } = require('express-validator');
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
 
-// Firebase Admin 초기화 (Storage 미사용)
+// Firebase Admin 초기화
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -53,10 +53,10 @@ app.post(
     body('humorStyle').isString().optional(),
     body('greeting').isString().optional(),
     body('tags').isArray().optional(),
-    body('finalPersonality').optional().isObject(),
-    body('finalPersonality.introversion').optional().isNumeric(),
-    body('finalPersonality.warmth').optional().isNumeric(),
-    body('finalPersonality.competence').optional().isNumeric(),
+    body('personality').optional().isObject(),
+    body('personality.extroversion').optional().isNumeric(),
+    body('personality.warmth').optional().isNumeric(),
+    body('personality.competence').optional().isNumeric(),
     body('photoUrl').isString().optional(),
   ],
   async (req, res) => {
@@ -78,10 +78,10 @@ app.post(
         humorStyle: data.humorStyle || '',
         greeting: data.greeting || '',
         tags: Array.isArray(data.tags) ? data.tags : [],
-        finalPersonality: {
-          introversion: data.finalPersonality?.introversion ?? 0,
-          warmth: data.finalPersonality?.warmth ?? 0,
-          competence: data.finalPersonality?.competence ?? 0,
+        personality: {
+          extroversion: data.personality?.extroversion ?? 0,
+          warmth: data.personality?.warmth ?? 0,
+          competence: data.personality?.competence ?? 0,
         },
         photoUrl: data.photoUrl || '',
         createdBy: req.user?.uid || null, // 인증되지 않은 경우 null
