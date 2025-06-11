@@ -8,14 +8,12 @@ const { body, param, validationResult } = require('express-validator');
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
 
-// Firebase Admin 초기화 (Storage 버킷 설정으로 성능 최적화)
+// Firebase Admin 초기화 (Storage 미사용)
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'nompangs-96d37.appspot.com'
+  credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
 
 const app = express();
 // CORS 허용 도메인 목록 설정
@@ -93,14 +91,10 @@ app.post(
       };
       await db.collection('qr_profiles').doc(id).set(profile);
 
-      // QR 코드 PNG 버퍼 생성
-      const qrBuffer = await QRCode.toBuffer(id, { type: 'png' });
-      // Cloud Storage에 업로드 및 서명된 URL 생성
-      const file = bucket.file(`qrCodes/${id}.png`);
-      await file.save(qrBuffer, { contentType: 'image/png' });
-      const [url] = await file.getSignedUrl({ action: 'read', expires: '03-01-2500' });
+      // QR 코드 데이터 URL 생성 (Storage 미사용)
+      const qrUrl = await QRCode.toDataURL(id);
 
-      res.status(200).json({ personaId: id, qrUrl: url });
+      res.status(200).json({ personaId: id, qrUrl });
     } catch (err) {
       functions.logger.error('createQR 실패', err); // 에러 로깅
       res.status(500).json({ error: 'Failed to create QR profile' });
