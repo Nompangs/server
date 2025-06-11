@@ -1,5 +1,8 @@
+require('dotenv').config();
+
 const functions = require('firebase-functions');
 const express = require('express');
+const OpenAI = require('openai');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
@@ -23,7 +26,7 @@ const allowedOrigins = [
 ];
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
-
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // QR 생성 API 엔드포인트
 app.post(
@@ -196,6 +199,20 @@ app.get(
     }
   }
 );
+
+// WebRTC (Real-Time Communication)을 위한 임시 키(Ephemeral Key) 발급
+app.get('/session', async (req, res) => {
+  try {
+    // 5분 동안 유효한 임시 키 생성
+    const ephemeralKey = await openai.ephemeralKeys.create({
+      session: { 'x-openai-as-role': 'user' } 
+    }, { expiresIn: 300 });
+
+    res.json({ client_secret: ephemeralKey });
+  } catch (error) {
+    res.status(500).send('Error creating ephemeral key');
+  }
+});
 
 exports.api = functions.https.onRequest(app);
 
