@@ -8,14 +8,12 @@ const { body, param, validationResult } = require('express-validator');
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
 
-// Firebase Admin 초기화 (Storage 버킷 설정으로 성능 최적화)
+// Firebase Admin 초기화 (Storage 미사용)
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'nompangs-96d37.firebasestorage.app'
+  credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
 
 const app = express();
 // CORS 허용 도메인 목록 설정
@@ -26,26 +24,10 @@ const allowedOrigins = [
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-// 인증 미들웨어
-async function authenticate(req, res, next) {
-  const authHeader = req.get('Authorization') || '';
-  const match = authHeader.match(/^Bearer (.+)$/);
-  if (!match) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const idToken = match[1];
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    req.user = decoded; // 인증된 사용자의 UID 저장
-    next();
-  } catch (err) {
-    functions.logger.error('인증 오류', err); // 에러 로깅
-    res.status(401).json({ error: 'Unauthorized' });
-  }
-}
 
 // QR 생성 API 엔드포인트
 app.post(
   '/createQR',
-  authenticate,  // 인증 필수
   [
     // 입력값 검증
     body('name').isString().notEmpty(),
@@ -56,11 +38,20 @@ app.post(
     body('humorStyle').isString().optional(),
     body('greeting').isString().optional(),
     body('tags').isArray().optional(),
-    body('finalPersonality').optional().isObject(),
-    body('finalPersonality.introversion').optional().isNumeric(),
-    body('finalPersonality.warmth').optional().isNumeric(),
-    body('finalPersonality.competence').optional().isNumeric(),
+    body('personality').optional().isObject(),
+    body('personality.extroversion').optional().isNumeric(),
+    body('personality.warmth').optional().isNumeric(),
+    body('personality.competence').optional().isNumeric(),
     body('photoUrl').isString().optional(),
+    // 🚀 AI 성격 시스템 확장 필드들
+    body('aiPersonalityProfile').optional().isObject(),
+    body('photoAnalysis').optional().isObject(),
+    body('lifeStory').optional().isObject(),
+    body('humorMatrix').optional().isObject(),
+    body('attractiveFlaws').optional().isArray(),
+    body('contradictions').optional().isArray(),
+    body('communicationStyle').optional().isObject(),
+    body('structuredPrompt').optional().isString(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -70,8 +61,9 @@ app.post(
     try {
       const data = req.body;
       const id = uuidv4();
-      // 데이터 모델 확장 및 기본값 설정
+      // 🌟 확장된 데이터 목록 구성
       const profile = {
+        // === 기본 정보 ===
         personaId: id,
         name: data.name,
         objectType: data.objectType || '',
@@ -81,27 +73,91 @@ app.post(
         humorStyle: data.humorStyle || '',
         greeting: data.greeting || '',
         tags: Array.isArray(data.tags) ? data.tags : [],
-        finalPersonality: {
-          introversion: data.finalPersonality?.introversion ?? 0,
-          warmth: data.finalPersonality?.warmth ?? 0,
-          competence: data.finalPersonality?.competence ?? 0,
-        },
         photoUrl: data.photoUrl || '',
-        createdBy: req.user.uid,        // 생성자 정보 기록
-        totalInteractions: 0,           // 대화 횟수 초기화
-        uniqueUsers: 0,                 // 고유 사용자 수 초기화
+
+        // === 기존 성격 시스템 ===
+        personality: {
+          extroversion: data.personality?.extroversion ?? 0,
+          warmth: data.personality?.warmth ?? 0,
+          competence: data.personality?.competence ?? 0,
+        },
+
+        // === 🚀 AI 성격 시스템 ===
+        aiPersonalityProfile: {
+          version: '3.0',
+          variables: data.aiPersonalityProfile?.variables || {},
+          warmthFactors: data.aiPersonalityProfile?.warmthFactors || {},
+          competenceFactors: data.aiPersonalityProfile?.competenceFactors || {},
+          extraversionFactors: data.aiPersonalityProfile?.extraversionFactors || {},
+          humorFactors: data.aiPersonalityProfile?.humorFactors || {},
+          flawFactors: data.aiPersonalityProfile?.flawFactors || {},
+          speechPatterns: data.aiPersonalityProfile?.speechPatterns || {},
+          relationshipStyles: data.aiPersonalityProfile?.relationshipStyles || {},
+          generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          basedOnPhoto: !!data.photoUrl,
+        },
+
+        // === 사진 분석 결과 ===
+        photoAnalysis: {
+          objectDetection: data.photoAnalysis?.objectDetection || {},
+          materialAnalysis: data.photoAnalysis?.materialAnalysis || {},
+          conditionAssessment: data.photoAnalysis?.conditionAssessment || {},
+          personalityHints: data.photoAnalysis?.personalityHints || {},
+          confidence: data.photoAnalysis?.confidence || 0,
+          analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+
+        // === 생애 스토리 (ai 생성) ===
+        lifeStory: {
+          background: data.lifeStory?.background || '',
+          emotionalJourney: data.lifeStory?.emotionalJourney || {},
+          relationships: data.lifeStory?.relationships || [],
+          secretWishes: data.lifeStory?.secretWishes || [],
+          innerComplaints: data.lifeStory?.innerComplaints || [],
+          deepSatisfactions: data.lifeStory?.deepSatisfactions || [],
+        },
+
+        // === 유머 시스템 ===
+        humorMatrix: {
+          categories: data.humorMatrix?.categories || {},
+          preferences: data.humorMatrix?.preferences || {},
+          avoidancePatterns: data.humorMatrix?.avoidancePatterns || {},
+          timingFactors: data.humorMatrix?.timingFactors || {},
+        },
+
+        // === 매력적 결함 및 모순 ===
+        attractiveFlaws: Array.isArray(data.attractiveFlaws) ? data.attractiveFlaws : [],
+        contradictions: Array.isArray(data.contradictions) ? data.contradictions : [],
+
+        // === 소통 방식 ===
+        communicationStyle: {
+          speakingTone: data.communicationStyle?.speakingTone || '',
+          preferredTopics: data.communicationStyle?.preferredTopics || [],
+          avoidedTopics: data.communicationStyle?.avoidedTopics || [],
+          expressionPatterns: data.communicationStyle?.expressionPatterns || {},
+          emotionalRange: data.communicationStyle?.emotionalRange || {},
+        },
+
+        // === AI 시스템 프롬프트 ===
+        structuredPrompt: data.structuredPrompt || '',
+
+        // === 메타데이터 ===
+        createdBy: null,
+        totalInteractions: 0,
+        uniqueUsers: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+
+        // === 버전 관리 ===
+        schemaVersion: '2.0',
+        isLegacyProfile: false,
       };
       await db.collection('qr_profiles').doc(id).set(profile);
 
-      // QR 코드 PNG 버퍼 생성
-      const qrBuffer = await QRCode.toBuffer(id, { type: 'png' });
-      // Cloud Storage에 업로드 및 서명된 URL 생성
-      const file = bucket.file(`qrCodes/${id}.png`);
-      await file.save(qrBuffer, { contentType: 'image/png' });
-      const [url] = await file.getSignedUrl({ action: 'read', expires: '03-01-2500' });
+      // QR 코드 데이터 URL 생성 (Storage 미사용)
+      const qrUrl = await QRCode.toDataURL(id);
 
-      res.status(200).json({ personaId: id, qrUrl: url });
+      res.status(200).json({ personaId: id, qrUrl });
     } catch (err) {
       functions.logger.error('createQR 실패', err); // 에러 로깅
       res.status(500).json({ error: 'Failed to create QR profile' });
@@ -112,7 +168,6 @@ app.post(
 // QR 로드 및 상호작용 기록 API 엔드포인트
 app.get(
   '/loadQR/:uuid',
-  authenticate,                     // 인증 필수
   [param('uuid').isUUID()],        // UUID 형식 검증
   async (req, res) => {
     const errors = validationResult(req);
@@ -128,17 +183,10 @@ app.get(
       }
       const data = doc.data();
 
-      // 트랜잭션으로 상호작용 기록
-      const interactionRef = docRef.collection('interactions').doc(req.user.uid);
-      await db.runTransaction(async tx => {
-        const interactionDoc = await tx.get(interactionRef);
-        if (!interactionDoc.exists) {
-          // 최초 접근한 사용자 -> uniqueUsers 증가
-          tx.set(interactionRef, { firstSeen: admin.firestore.FieldValue.serverTimestamp() });
-          tx.update(docRef, { uniqueUsers: admin.firestore.FieldValue.increment(1) });
-        }
-        // 전체 상호작용 수 증가
-        tx.update(docRef, { totalInteractions: admin.firestore.FieldValue.increment(1) });
+      // 상호작용 카운트만 증가
+      await docRef.update({
+        totalInteractions: admin.firestore.FieldValue.increment(1),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       res.status(200).json(data);
