@@ -27,7 +27,7 @@ firebase deploy --only functions
 * `POST https://<region>-<project>.cloudfunctions.net/api/createQR`
 
   * 요청 본문: 프로필 필드 객체
-  * 반환값: `{ personaId, qrUrl }` (여기서 `qrUrl`은 서명된 PNG 이미지 URL)
+  * 반환값: `{ personaId, qrUrl }` (여기서 `qrUrl`은 PNG 이미지의 데이터 URL)
 * `GET https://<region>-<project>.cloudfunctions.net/api/loadQR/{personaId}`
 
 Firestore 데이터베이스는 반드시 네이티브 모드여야 합니다.
