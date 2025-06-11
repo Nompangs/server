@@ -64,7 +64,7 @@ app.post(
       // 🌟 확장된 데이터 목록 구성
       const profile = {
         // === 기본 정보 ===
-        personaId: id,
+        uuid: id,
         name: data.name,
         objectType: data.objectType || '',
         location: data.location || '',
@@ -157,7 +157,7 @@ app.post(
       // QR 코드 데이터 URL 생성 (Storage 미사용)
       const qrUrl = await QRCode.toDataURL(id);
 
-      res.status(200).json({ personaId: id, qrUrl });
+      res.status(200).json({ uuid: id, qrUrl });
     } catch (err) {
       functions.logger.error('createQR 실패', err); // 에러 로깅
       res.status(500).json({ error: 'Failed to create QR profile' });
