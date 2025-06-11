@@ -75,7 +75,7 @@ app.post(
         tags: Array.isArray(data.tags) ? data.tags : [],
         photoUrl: data.photoUrl || '',
 
-        // === 기지의 성격 시스템 ===
+        // === 기존 성격 시스템 ===
         personality: {
           extroversion: data.personality?.extroversion ?? 0,
           warmth: data.personality?.warmth ?? 0,
@@ -97,7 +97,7 @@ app.post(
           basedOnPhoto: !!data.photoUrl,
         },
 
-        // === 사진 분석 ===
+        // === 사진 분석 결과 ===
         photoAnalysis: {
           objectDetection: data.photoAnalysis?.objectDetection || {},
           materialAnalysis: data.photoAnalysis?.materialAnalysis || {},
@@ -107,7 +107,7 @@ app.post(
           analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
 
-        // === 생아온 스토리 ===
+        // === 생애 스토리 (ai 생성) ===
         lifeStory: {
           background: data.lifeStory?.background || '',
           emotionalJourney: data.lifeStory?.emotionalJourney || {},
@@ -117,7 +117,7 @@ app.post(
           deepSatisfactions: data.lifeStory?.deepSatisfactions || [],
         },
 
-        // === 유모 메트릭스 ===
+        // === 유머 시스템 ===
         humorMatrix: {
           categories: data.humorMatrix?.categories || {},
           preferences: data.humorMatrix?.preferences || {},
@@ -125,7 +125,7 @@ app.post(
           timingFactors: data.humorMatrix?.timingFactors || {},
         },
 
-        // === 매려적 결함 및 모순 ===
+        // === 매력적 결함 및 모순 ===
         attractiveFlaws: Array.isArray(data.attractiveFlaws) ? data.attractiveFlaws : [],
         contradictions: Array.isArray(data.contradictions) ? data.contradictions : [],
 
@@ -138,7 +138,7 @@ app.post(
           emotionalRange: data.communicationStyle?.emotionalRange || {},
         },
 
-        // === AI 시스템 프론프트 ===
+        // === AI 시스템 프롬프트 ===
         structuredPrompt: data.structuredPrompt || '',
 
         // === 메타데이터 ===
