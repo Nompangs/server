@@ -55,7 +55,9 @@ app.post(
 
       await db.collection('qr_profiles').doc(id).set(fullProfile);
 
-      const qrUrl = await QRCode.toDataURL(id);
+      const fullWebUrl = `https://invitepage.netlify.app/?roomId=${id}`;
+      const qrUrl = await QRCode.toDataURL(fullWebUrl);
+
       res.json({ qrUrl });
     } catch (error) {
       console.error("Error in /createQR:", error);
