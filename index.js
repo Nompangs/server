@@ -40,6 +40,7 @@ app.post(
     body('userInput').isObject().withMessage('userInput은 객체여야 합니다.'),
   ],
   async (req, res) => {
+    // photoBase64가 있으면 길이만 로그에 남기기
     const logBody = { ...req.body };
     if (logBody.photoBase64) {
       logBody.photoBase64 = `[base64 string, length: ${logBody.photoBase64.length}]`;
@@ -113,6 +114,23 @@ app.get('/loadQR/:uuid', async (req, res) => {
         console.error(`[GET /loadQR/:uuid] 에러:`, error);
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+app.get('/objects/awoken', async (req, res) => {
+  const user = await verifyIdToken(req.headers.authorization);
+  const snapshot = await db.collection('qr_profiles').where('uid', '==', user.uid).get();
+  const objects = snapshot.docs.map(doc => ({
+    uuid: doc.data().uuid,
+    name: doc.data().generatedProfile?.aiPersonalityProfile?.name ?? '알 수 없는 사물',
+    imageUrl: doc.data().userInput?.photoPath
+      ?? doc.data().userInput?.imageUrl
+      ?? null,
+    lastInteraction: doc.data().lastInteraction ?? doc.data().createdAt?.toDate().toISOString(),
+    location: doc.data().userInput?.location
+      ?? doc.data().generatedProfile?.location
+      ?? '위치 없음',
+  }));
+  res.json(objects);
 });
 
 const port = process.env.PORT || 8080;
