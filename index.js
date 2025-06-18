@@ -129,6 +129,12 @@ app.get('/objects/awoken', async (req, res) => {
     location: doc.data().userInput?.location
       ?? doc.data().generatedProfile?.location
       ?? '위치 없음',
+    greeting: doc.data().userInput?.greeting
+      ?? doc.data().generatedProfile?.greeting
+      ?? null,
+    personalityTags: doc.data().userInput?.personalityTags
+      ?? doc.data().generatedProfile?.personalityTags
+      ?? null,
   }));
   res.json(objects);
 });
