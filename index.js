@@ -117,26 +117,42 @@ app.get('/loadQR/:uuid', async (req, res) => {
 });
 
 app.get('/objects/awoken', async (req, res) => {
-  const user = await verifyIdToken(req.headers.authorization);
-  const snapshot = await db.collection('qr_profiles').where('uid', '==', user.uid).get();
-  const objects = snapshot.docs.map(doc => ({
-    uuid: doc.data().uuid,
-    name: doc.data().generatedProfile?.aiPersonalityProfile?.name ?? '알 수 없는 사물',
-    imageUrl: doc.data().userInput?.photoPath
-      ?? doc.data().userInput?.imageUrl
-      ?? null,
-    lastInteraction: doc.data().lastInteraction ?? doc.data().createdAt?.toDate().toISOString(),
-    location: doc.data().userInput?.location
-      ?? doc.data().generatedProfile?.location
-      ?? '위치 없음',
-    greeting: doc.data().userInput?.greeting
-      ?? doc.data().generatedProfile?.greeting
-      ?? null,
-    personalityTags: doc.data().userInput?.personalityTags
-      ?? doc.data().generatedProfile?.personalityTags
-      ?? null,
-  }));
-  res.json(objects);
+  try {
+    console.log("[GET /objects/awoken] 요청 받음");
+    console.log("[GET /objects/awoken] Authorization 헤더:", req.headers.authorization);
+    // 인증 토큰 검증
+    let user = null;
+    try {
+      user = await verifyIdToken(req.headers.authorization);
+      console.log("[GET /objects/awoken] 인증된 uid:", user.uid);
+    } catch (authError) {
+      console.error("[GET /objects/awoken] 인증 토큰 검증 실패:", authError);
+      return res.status(401).json({ success: false, error: '인증 실패: 유효하지 않은 토큰' });
+    }
+    const snapshot = await db.collection('qr_profiles').where('uid', '==', user.uid).get();
+    const objects = snapshot.docs.map(doc => ({
+      uuid: doc.data().uuid,
+      name: doc.data().generatedProfile?.aiPersonalityProfile?.name ?? '알 수 없는 사물',
+      imageUrl: doc.data().userInput?.photoPath
+        ?? doc.data().userInput?.imageUrl
+        ?? null,
+      lastInteraction: doc.data().lastInteraction ?? doc.data().createdAt?.toDate().toISOString(),
+      location: doc.data().userInput?.location
+        ?? doc.data().generatedProfile?.location
+        ?? '위치 없음',
+      greeting: doc.data().userInput?.greeting
+        ?? doc.data().generatedProfile?.greeting
+        ?? null,
+      personalityTags: doc.data().userInput?.personalityTags
+        ?? doc.data().generatedProfile?.personalityTags
+        ?? null,
+    }));
+    console.log(`[GET /objects/awoken] ${objects.length}개 객체 반환`);
+    res.json(objects);
+  } catch (error) {
+    console.error("[GET /objects/awoken] 에러:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 const port = process.env.PORT || 8080;
