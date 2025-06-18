@@ -31,6 +31,60 @@ async function verifyIdToken(authorizationHeader) {
   return await admin.auth().verifyIdToken(idToken);
 }
 
+// Firestore 저장을 위한 데이터 정제 함수
+function sanitizeForFirestore(obj, depth = 0) {
+  // 너무 깊은 중첩 방지 (Firestore는 20레벨 제한)
+  if (depth > 15) {
+    console.warn(`[sanitizeForFirestore] 너무 깊은 중첩 레벨 (${depth}), 제거됨`);
+    return null;
+  }
+  
+  // null, undefined 처리
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  
+  // 배열 처리
+  if (Array.isArray(obj)) {
+    const sanitizedArray = obj
+      .map(item => sanitizeForFirestore(item, depth + 1))
+      .filter(item => item !== null && item !== undefined);
+    return sanitizedArray.length > 0 ? sanitizedArray : [];
+  }
+  
+  // Date 객체 처리
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+  
+  // 객체 처리
+  if (typeof obj === 'object' && obj.constructor === Object) {
+    const sanitized = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // 키 이름 검증 (Firestore 필드명 규칙)
+      if (typeof key !== 'string' || key.includes('.') || key.includes('[') || key.includes(']')) {
+        console.warn(`[sanitizeForFirestore] 잘못된 키 이름 무시: ${key}`);
+        continue;
+      }
+      
+      const sanitizedValue = sanitizeForFirestore(value, depth + 1);
+      if (sanitizedValue !== null && sanitizedValue !== undefined) {
+        sanitized[key] = sanitizedValue;
+      }
+    }
+    return sanitized;
+  }
+  
+  // 기본 타입들 (string, number, boolean)
+  if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+    return obj;
+  }
+  
+  // 함수, Symbol, 기타 지원되지 않는 타입들
+  console.warn(`[sanitizeForFirestore] 지원되지 않는 타입 제거: ${typeof obj}`);
+  return null;
+}
+
 // 새로운 '/createQR' 엔드포인트
 app.post(
   '/createQR',
@@ -73,12 +127,33 @@ app.post(
       const id = uuidv4();
       console.log(`[POST /createQR] 생성된 uuid: ${id}`);
 
+      // 데이터 정제 (photoBase64 제거)
+      console.log(`[POST /createQR] 원본 데이터 타입 확인:`);
+      console.log(`  - generatedProfile: ${typeof generatedProfile}, keys: ${Object.keys(generatedProfile || {})}`);
+      console.log(`  - userInput: ${typeof userInput}, keys: ${Object.keys(userInput || {})}`);
+      
+      // photoBase64 필드 제거 (Firestore 크기 제한 때문)
+      const cleanGeneratedProfile = { ...generatedProfile };
+      if (cleanGeneratedProfile.photoBase64) {
+        console.log(`[POST /createQR] photoBase64 필드 제거됨 (크기: ${cleanGeneratedProfile.photoBase64.length})`);
+        delete cleanGeneratedProfile.photoBase64;
+      }
+      
+      const sanitizedGeneratedProfile = sanitizeForFirestore(cleanGeneratedProfile);
+      const sanitizedUserInput = sanitizeForFirestore(userInput);
+      
+      console.log(`[POST /createQR] 데이터 정제 완료`);
+      console.log(`[POST /createQR] 정제된 데이터:`, JSON.stringify({
+        generatedProfile: sanitizedGeneratedProfile,
+        userInput: sanitizedUserInput
+      }, null, 2));
+
       const fullProfile = {
         uuid: id,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         version: '8.0',
-        generatedProfile,
-        userInput,
+        generatedProfile: sanitizedGeneratedProfile,
+        userInput: sanitizedUserInput,
         uid: user.uid, // uid 저장
       };
       console.log(`[POST /createQR] Firestore 저장 시도: qr_profiles/${id}, uid: ${user.uid}`);
