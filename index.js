@@ -89,7 +89,7 @@ app.post(
       const qrUrl = await QRCode.toDataURL(fullWebUrl);
       console.log(`[POST /createQR] QR 코드 생성 성공: ${fullWebUrl}`);
 
-      res.json({ qrUrl });
+      res.json({ qrUrl, uuid: id });
     } catch (error) {
       console.error("[POST /createQR] 에러:", error);
       res.status(500).json({ success: false, error: error.message });
